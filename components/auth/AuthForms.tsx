@@ -45,20 +45,28 @@ export function SignupForm() {
           return;
         }
         setBusy(true);
-        const { error } = await supabase.auth.signUp({
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(parsed.data),
+        });
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        if (!response.ok) {
+          setBusy(false);
+          setBanner(body?.error ?? "Could not create the account.");
+          return;
+        }
+        const { error } = await supabase.auth.signInWithPassword({
           email: parsed.data.email,
           password: parsed.data.password,
-          options: {
-            data: { full_name: parsed.data.fullName, phone: parsed.data.phone },
-            emailRedirectTo: `${site.url}/login`,
-          },
         });
         setBusy(false);
         if (error) {
-          setBanner(error.message);
+          setBanner("Account created. Log in with the same email and password.");
           return;
         }
         router.push(`/signup/welcome?next=${encodeURIComponent(next)}`);
+        router.refresh();
       }}
     >
       <p className="rounded-2xl bg-orange-tint px-4 py-3 text-sm font-bold text-orange-dark">
