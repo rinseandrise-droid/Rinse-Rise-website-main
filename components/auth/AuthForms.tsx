@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { firstOrderOffer, site } from "@/data/site";
+import { PhoneField } from "@/components/ui/PhoneField";
 import { AUTH_NOT_CONFIGURED_MESSAGE } from "@/lib/supabase/config";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { loginSchema, signupSchema } from "@/lib/validation";
@@ -71,7 +72,7 @@ export function SignupForm() {
       </label>
       <label>
         <span className="field-label">Mobile number</span>
-        <input className="input" name="phone" type="tel" inputMode="numeric" autoComplete="tel" required aria-invalid={!!errors.phone} />
+        <PhoneField required invalid={!!errors.phone} />
         <FieldError message={errors.phone} />
       </label>
       <label>

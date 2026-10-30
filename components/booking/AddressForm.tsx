@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PhoneField } from "@/components/ui/PhoneField";
 import { addressSchema } from "@/lib/validation";
 
 const LABELS = ["Home", "Work", "Other"] as const;
@@ -97,7 +98,11 @@ function Field({
   return (
     <label className={className}>
       <span className="field-label">{label}</span>
-      <input className="input" name={name} autoComplete={autoComplete} inputMode={inputMode} aria-invalid={Boolean(error)} />
+      {name === "phone" ? (
+        <PhoneField name={name} autoComplete={autoComplete} invalid={Boolean(error)} />
+      ) : (
+        <input className="input" name={name} autoComplete={autoComplete} inputMode={inputMode} aria-invalid={Boolean(error)} />
+      )}
       {error && <p className="field-error">{error}</p>}
     </label>
   );

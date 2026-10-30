@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PhoneField } from "@/components/ui/PhoneField";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { normalizeIndianMobile } from "@/lib/phone";
 import { toast } from "@/lib/ui-store";
 import { profileSchema } from "@/lib/validation";
 
@@ -22,7 +24,7 @@ export default function ProfilePage() {
       .then(({ data }) => {
         if (!data) return;
         setFullName(data.full_name ?? "");
-        setPhone(data.phone ?? "");
+        setPhone(normalizeIndianMobile(data.phone ?? ""));
         setEmail(data.email ?? "");
       });
   }, []);
@@ -58,7 +60,7 @@ export default function ProfilePage() {
       </label>
       <label>
         <span className="field-label">Mobile</span>
-        <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <PhoneField value={phone} onChange={(e) => setPhone(e.target.value)} />
       </label>
       <label>
         <span className="field-label">Email</span>

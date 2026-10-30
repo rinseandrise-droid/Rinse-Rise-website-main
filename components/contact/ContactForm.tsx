@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PhoneField } from "@/components/ui/PhoneField";
 import { site } from "@/data/site";
 import { isIndianMobile } from "@/lib/phone";
 
@@ -73,15 +74,7 @@ export function ContactForm() {
       </label>
       <label>
         <span className="field-label">Mobile</span>
-        <input
-          className="input"
-          name="phone"
-          type="tel"
-          inputMode="numeric"
-          autoComplete="tel"
-          required
-          aria-invalid={error.includes("mobile") || undefined}
-        />
+        <PhoneField required invalid={error.includes("mobile")} />
       </label>
       <label>
         <span className="field-label">Message</span>
