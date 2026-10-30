@@ -8,6 +8,7 @@ test("normalizes spacing, dashes and +91 prefixes", () => {
   assert.equal(normalizeIndianMobile("919591506548"), "9591506548");
   assert.equal(normalizeIndianMobile("9175504996"), "9175504996");
   assert.equal(normalizeIndianMobile("+91 91755 04996"), "9175504996");
+  assert.equal(normalizeIndianMobile("(91) 7550-4996"), "9175504996");
 });
 
 test("accepts valid Indian mobiles and rejects invalid ones", () => {
