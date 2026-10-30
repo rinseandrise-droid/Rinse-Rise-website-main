@@ -1,58 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { PhoneField } from "@/components/ui/PhoneField";
 import { addressSchema } from "@/lib/validation";
 
 const LABELS = ["Home", "Work", "Other"] as const;
 
-export function AddressForm({
-  onSaved,
-}: {
-  onSaved: () => void;
-}) {
+export type AddressFormHandle = {
+  /** Saves the form and returns the new address id, or null when it cannot be saved. */
+  save: () => Promise<string | null>;
+};
+
+export const AddressForm = forwardRef<AddressFormHandle, { onSaved: (id: string) => void }>(function AddressForm(
+  { onSaved },
+  ref,
+) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const savingRef = useRef(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState("");
 
+  async function save(): Promise<string | null> {
+    const form = formRef.current;
+    if (!form || savingRef.current) return null;
+    setBanner("");
+    const raw = Object.fromEntries(new FormData(form).entries());
+    const parsed = addressSchema.safeParse(raw);
+    if (!parsed.success) {
+      const next: Record<string, string> = {};
+      for (const issue of parsed.error.issues) next[String(issue.path[0] ?? "form")] = issue.message;
+      setErrors(next);
+      setBanner(Object.values(next)[0] ?? "Check the address and try again.");
+      return null;
+    }
+    setErrors({});
+    const { getSupabaseBrowser } = await import("@/lib/supabase/client");
+    const supabase = getSupabaseBrowser();
+    if (!supabase) {
+      setBanner("Accounts are not switched on yet.");
+      return null;
+    }
+    const { data: session } = await supabase.auth.getUser();
+    if (!session.user) {
+      setBanner("Sign in to save an address.");
+      return null;
+    }
+    savingRef.current = true;
+    setBusy(true);
+    const { data, error } = await supabase
+      .from("addresses")
+      .insert({ ...parsed.data, user_id: session.user.id })
+      .select("id")
+      .single();
+    savingRef.current = false;
+    setBusy(false);
+    if (error || !data) {
+      setBanner(error?.message ?? "Could not save the address.");
+      return null;
+    }
+    form.reset();
+    onSaved(data.id);
+    return data.id;
+  }
+
+  useImperativeHandle(ref, () => ({ save }));
+
   return (
     <form
+      ref={formRef}
       className="mt-4 grid gap-3 sm:grid-cols-2"
       onSubmit={async (e) => {
         e.preventDefault();
-        setBanner("");
-        const raw = Object.fromEntries(new FormData(e.currentTarget).entries());
-        const parsed = addressSchema.safeParse(raw);
-        if (!parsed.success) {
-          const next: Record<string, string> = {};
-          for (const issue of parsed.error.issues) next[String(issue.path[0])] = issue.message;
-          setErrors(next);
-          return;
-        }
-        setErrors({});
-        const { getSupabaseBrowser } = await import("@/lib/supabase/client");
-        const supabase = getSupabaseBrowser();
-        if (!supabase) {
-          setBanner("Accounts are not switched on yet.");
-          return;
-        }
-        const { data: session } = await supabase.auth.getUser();
-        if (!session.user) {
-          setBanner("Sign in to save an address.");
-          return;
-        }
-        setBusy(true);
-        const { error } = await supabase.from("addresses").insert({ ...parsed.data, user_id: session.user.id });
-        setBusy(false);
-        if (error) {
-          setBanner(error.message);
-          return;
-        }
-        e.currentTarget.reset();
-        onSaved();
+        await save();
       }}
     >
-      {banner && <p className="sm:col-span-2 text-sm font-semibold text-danger">{banner}</p>}
+      {banner && (
+        <p className="sm:col-span-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-danger" role="alert">
+          {banner}
+        </p>
+      )}
       <div className="sm:col-span-2 flex flex-wrap gap-2">
         {LABELS.map((label) => (
           <label key={label} className="chip cursor-pointer">
@@ -78,7 +105,7 @@ export function AddressForm({
       </button>
     </form>
   );
-}
+});
 
 function Field({
   name,

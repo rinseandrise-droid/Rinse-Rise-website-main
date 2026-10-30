@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AddressForm } from "@/components/booking/AddressForm";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AddressForm, type AddressFormHandle } from "@/components/booking/AddressForm";
 import { OrderTotals } from "@/components/booking/OrderTotals";
 import { QuantityStepper } from "@/components/booking/QuantityStepper";
 import { bookingWindowDays, firstOrderOffer, pickupSlots } from "@/data/site";
@@ -36,6 +36,7 @@ export function BookFlow({ firstOrderEligible }: { firstOrderEligible: boolean }
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const addressFormRef = useRef<AddressFormHandle>(null);
 
   const totals = useMemo(
     () => calculateOrderTotal({ lines, applyFirstOrderDiscount: firstOrderEligible }),
@@ -135,7 +136,7 @@ export function BookFlow({ firstOrderEligible }: { firstOrderEligible: boolean }
         {step === 1 && (
           <div>
             {addresses.length === 0 ? (
-              <p className="text-muted">Save a pickup address to continue.</p>
+            <p className="text-muted">Add the pickup address, then press Continue.</p>
             ) : (
               <ul className="space-y-3">
                 {addresses.map((a) => (
@@ -156,7 +157,13 @@ export function BookFlow({ firstOrderEligible }: { firstOrderEligible: boolean }
               </ul>
             )}
             <h3 className="mt-8 font-display text-xl font-extrabold">Add an address</h3>
-            <AddressForm onSaved={() => void loadAddresses()} />
+            <AddressForm
+              ref={addressFormRef}
+              onSaved={(id) => {
+                setAddressId(id);
+                void loadAddresses();
+              }}
+            />
           </div>
         )}
 
@@ -220,10 +227,19 @@ export function BookFlow({ firstOrderEligible }: { firstOrderEligible: boolean }
             <button
               type="button"
               className="btn btn-primary flex-1 sm:flex-none"
-              disabled={step === 1 && !addressId}
-              onClick={() => setStep((s) => s + 1)}
+              disabled={busy}
+              onClick={async () => {
+                if (step === 1 && !addressId) {
+                  setBusy(true);
+                  const id = await addressFormRef.current?.save();
+                  setBusy(false);
+                  if (!id) return;
+                  setAddressId(id);
+                }
+                setStep((s) => s + 1);
+              }}
             >
-              Continue
+              {busy && step === 1 ? "Saving address…" : "Continue"}
             </button>
           )}
         </div>
